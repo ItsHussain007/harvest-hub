@@ -436,7 +436,7 @@ const RegistrationPage: React.FC = () => {
     return (
       <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 md:hidden">
         <div className="px-4 py-3 flex items-center justify-between">
-          {(step > 0 && step !== 5 && !(step === 4 && loginMethod === 'google')) && (
+          {(step >= 1 && step !== 5 && !(step === 4 && loginMethod === 'google')) && (
             <button onClick={handleBack} disabled={loading} className="flex items-center text-gray-600 gap-1.5 py-1 disabled:opacity-50">
               <ArrowLeft className="w-4 h-4" /><span className="text-sm font-medium">Back</span>
             </button>
@@ -454,8 +454,8 @@ const RegistrationPage: React.FC = () => {
 
   const renderDesktopProgress = () => {
     if (step === 0) return null; // Hide on Account Type
-    const labels = loginMethod === 'email' 
-      ? ['Account Type', 'Sign Up', 'Email', 'Personal Info', 'Password', 'Success'] 
+    const labels = loginMethod === 'email'
+      ? ['Account Type', 'Sign Up', 'Email', 'Personal Info', 'Password', 'Success']
       : ['Account Type', 'Sign Up', 'Complete'];
     const totalSteps = labels.length; // 6 for Email, 3 for Google
     const progressStep = step === 1 ? 2 : step === 2 ? 3 : step === 3 ? 4 : step === 4 ? (loginMethod === 'email' ? 5 : 3) : 6; // Map steps to progress
@@ -493,22 +493,24 @@ const RegistrationPage: React.FC = () => {
               </div>
               <div className="space-y-6">{getStepContent()}</div>
               <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4">
-                {step !== 1 && step >= 0 && (
-                  <div className="flex gap-4">
-                    {(step > 0 && step !== 5 && !(step === 4 && loginMethod === 'google')) && (
-                      <button onClick={handleBack} disabled={loading} className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50">
-                        <ArrowLeft className="w-5 h-5" />Back
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4">
+                  {step >= 0 && (
+                    <div className="flex gap-4">
+                      {(step >= 1 && step !== 5 && !(step === 4 && loginMethod === 'google')) && (
+                        <button onClick={handleBack} disabled={loading} className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50">
+                          <ArrowLeft className="w-5 h-5" />Back
+                        </button>
+                      )}
+                      <button
+                        onClick={step === 4 && loginMethod === 'email' ? handleSubmit : step === 5 || (step === 4 && loginMethod !== 'email') ? () => window.location.href = '/login' : handleNext}
+                        disabled={isNextDisabled()}
+                        className={`flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors ${isNextDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {loading ? 'Processing...' : step === 4 && loginMethod === 'email' ? 'Create Account' : step === 5 || (step === 4 && loginMethod === 'google') ? 'Done' : 'Next'}
                       </button>
-                    )}
-                    <button
-                      onClick={step === 4 && loginMethod === 'email' ? handleSubmit : step === 5 || (step === 4 && loginMethod !== 'email') ? () => window.location.href = '/login' : handleNext}
-                      disabled={isNextDisabled()}
-                      className={`flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors ${isNextDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      {loading ? 'Processing...' : step === 4 && loginMethod === 'email' ? 'Create Account' : step === 5 || (step === 4 && loginMethod !== 'email') ? 'Done' : 'Next'}
-                    </button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -521,9 +523,9 @@ const RegistrationPage: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm p-8">
               <div className="space-y-6">
                 {getStepContent()}
-                {step !== 1 && step >= 0 && (
+                {step >= 0 && (
                   <div className="flex gap-4 pt-4">
-                    {(step > 0 && step !== 5 && !(step === 4 && loginMethod === 'google')) && (
+                    {(step >= 1 && step !== 5 && !(step === 4 && loginMethod === 'google')) && (
                       <button onClick={handleBack} disabled={loading} className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50">
                         <ArrowLeft className="w-5 h-5" />Back
                       </button>
@@ -533,7 +535,7 @@ const RegistrationPage: React.FC = () => {
                       disabled={isNextDisabled()}
                       className={`flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${isNextDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      {loading ? 'Processing...' : step === 4 && loginMethod === 'email' ? 'Create Account' : step === 5 || (step === 4 && loginMethod !== 'email') ? 'Done' : 'Next'}
+                      {loading ? 'Processing...' : step === 4 && loginMethod === 'email' ? 'Create Account' : step === 5 || (step === 4 && loginMethod === 'google') ? 'Done' : 'Next'}
                       {step !== 4 && step !== 5 && <ArrowRight className="w-5 h-5" />}
                     </button>
                   </div>

@@ -5,12 +5,11 @@ import Joi from 'joi';
 import nodemailer from 'nodemailer';
 import speakeasy from 'speakeasy';
 import { NextRequest, NextResponse } from 'next/server';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
-// Function to extract IP from request
 const getClientIp = (req: NextRequest): string => {
   const forwardedFor = req.headers.get('x-forwarded-for');
-  return forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown'; // First IP in chain, fallback to 'unknown'
+  return forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
 };
 
 const rateLimiter = new RateLimiterMemory({
@@ -43,19 +42,88 @@ async function sendVerificationEmail(email: string, verificationToken: string): 
     secure: false,
     auth: { user: brevoSmtpUsername, pass: brevoSmtpPassword },
   });
+  
   const verificationLink = `http://localhost:3000/api/user-registration-verify-email?token=${verificationToken}`;
+  
+  // HTML email template
+  const htmlContent = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email - HarvestHub</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      .logo {
+        width: 150px;
+      }
+      h1 {
+        color: #4CAF50;
+      }
+      p {
+        color: #555;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 24px;
+        margin: 20px 0;
+        color: #fff;
+        background-color: #4CAF50;
+        text-decoration: none;
+        font-size: 18px;
+        border-radius: 5px;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img src="YOUR_LOGO_URL" alt="HarvestHub Logo" class="logo">
+      <h1>Welcome to HarvestHub! 🌱</h1>
+      <p>Thank you for joining us! You're just one step away from accessing the best fresh and local produce.</p>
+      <p>Click the button below to verify your email and activate your account:</p>
+      <a href="${verificationLink}" class="button">Verify My Email</a>
+      <p>If you did not sign up for HarvestHub, you can safely ignore this email.</p>
+      <p class="footer">HarvestHub | Fresh, Local, Sustainable</p>
+    </div>
+  </body>
+  </html>
+  `;
+  
   await transporter.sendMail({
     from: senderEmail,
     to: email,
     subject: 'Verify Your Email Address',
-    html: `<p>Click <a href="${verificationLink}">here</a> to verify your email.</p>`,
+    html: htmlContent,
   });
+  console.log('Verification email sent to:', email);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const clientIp = getClientIp(req);
   try {
-    const clientIp = getClientIp(req);
-    await rateLimiter.consume(clientIp); // Use extracted IP
+    await rateLimiter.consume(clientIp); // This throws RateLimiterRes if limit exceeded
 
     const body = await req.json();
     const { error, value } = registrationSchema.validate(body);
@@ -94,13 +162,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       message: 'Registration successful. Please verify your email and set up 2FA.',
       userId,
-      twoFactorSecret: twoFactorSecret.otpauth_url, // For QR code
+      twoFactorSecret: twoFactorSecret.otpauth_url,
       backupCodes,
     }, { status: 201 });
   } catch (err: any) {
     console.error(err);
+    if (err instanceof RateLimiterRes) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
     if (err.code === '23505') return NextResponse.json({ error: 'Email already registered' }, { status: 400 });
-    if (err.points) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
